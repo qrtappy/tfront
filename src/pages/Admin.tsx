@@ -146,10 +146,11 @@ export default function Admin() {
             onChange={(e) => setAdminKey(e.target.value)}
           />
           <input
-            type="number"
-            value={count}
-            onChange={(e) => setCount(Number(e.target.value))}
-            className="w-20 p-3 border rounded-xl text-sm outline-none text-center"
+            type="password"
+            placeholder="x-admin-secret 키"
+            className="flex-1 p-3 border rounded-xl text-sm outline-none"
+            value={adminKey}
+            onChange={(e) => setAdminKey(e.target.value)}
           />
           <button
             onClick={generateQR}
