@@ -146,12 +146,12 @@ export default function Admin() {
             onChange={(e) => setAdminKey(e.target.value)}
           />
           <input
-            type="password"
-            placeholder="x-admin-secret 키"
-            className="flex-1 p-3 border rounded-xl text-sm outline-none"
-            value={adminKey}
-            onChange={(e) => setAdminKey(e.target.value)}
-          />
+  type="password"
+  placeholder="x-admin-secret 키"
+  className="flex-1 p-3 border rounded-xl text-sm outline-none"
+  value={adminKey}
+  onChange={(e) => setAdminKey(e.target.value)}
+/>
           <button
             onClick={generateQR}
             disabled={generating}
