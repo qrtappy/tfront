@@ -24,8 +24,9 @@ export default function Receive() {
 
   const currentUrl = window.location.href;
 
-  const hiddenLogs: string[] = JSON.parse(
-    localStorage.getItem("hidden_logs") || "[]",
+  const hiddenLogs: string[] = typeof window !== "undefined"
+  ? JSON.parse(localStorage.getItem("hidden_logs") || "[]")
+  : [];
   );
 
   const triggerHaptic = () => {
