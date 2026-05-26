@@ -2,6 +2,13 @@ import { useState, useRef, useEffect } from "react";
 
 const WORKER = "https://tback.qrtappy.workers.dev";
 
+interface StickersResponse {
+  stickers: {
+    urls: string[];
+    links: string[];
+  };
+}
+
 export default function Send() {
   const [icons, setIcons] = useState<
     { src: string; link: string; id: number }[]
@@ -17,16 +24,6 @@ export default function Send() {
   const triggerHaptic = () => {
     if (navigator.vibrate) navigator.vibrate(50);
   };
-
-  interface StickersResponse {
-  stickers: {
-    urls: string[];
-    links: string[];
-  };
-}
-
-export default function Send() {
-  
 
   useEffect(() => {
     fetch(`${WORKER}/api/admin`)
