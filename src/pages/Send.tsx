@@ -86,14 +86,14 @@ export default function Send() {
   const handleSend = async () => {
     triggerHaptic();
     if (!previewImage) return alert("Take a photo");
-    const targetId = new URLSearchParams(window.location.search).get("id");
-    if (!targetId) return alert("No ID");
+    const uniqueId = new URLSearchParams(window.location.search).get("id");
+    if (!uniqueId) return alert("No ID");
     setUploading(true);
     try {
       const response = await fetch(`${WORKER}/api/send-photo`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: previewImage, targetId }),
+        body: JSON.stringify({ image: previewImage, uniqueId }),
       });
       if (!response.ok) throw new Error("서버 전송 실패");
       alert("complete");

@@ -68,7 +68,7 @@ export default function Receive() {
           .map((p: Photo) => ({
             id: p.key,
             src: `${WORKER}/api/photo/view/${encodeURIComponent(p.key)}`,
-            displayTime: new Date(p.uploaded).toLocaleTimeString("ko-KR", {
+            displayTime: new Date(p.uploaded).toLocaleTimeString([], {
               hour: "2-digit",
               minute: "2-digit",
             }),
@@ -258,15 +258,12 @@ export default function Receive() {
         <div className="fixed bottom-0 w-full max-w-[430px] bg-white border-t border-gray-100 flex justify-between items-center px-10 py-6 z-50">
           <button
             onClick={() => {
-              triggerHaptic();
-              isDeleteMode
-                ? (setIsDeleteMode(false), setSelectedIds([]))
-                : window.history.back();
+              // 아무 기능도 수행하지 않음
             }}
             className="w-[25px] h-[25px] active:scale-90"
           >
             <img
-              src="/icon6.png"
+              src="/icon2.png"
               alt=""
               className="object-contain w-full h-full"
             />
@@ -274,13 +271,17 @@ export default function Receive() {
           <button
             onClick={() => {
               triggerHaptic();
-              setIsDeleteMode(false);
-              setSelectedIds([]);
+              if (isDeleteMode) {
+                setIsDeleteMode(false);
+                setSelectedIds([]);
+              } else {
+                window.history.back();
+              }
             }}
-            className="w-[30px] h-[30px] active:scale-90"
+            className="w-[25px] h-[25px] active:scale-90"
           >
             <img
-              src="/ICON2.png"
+              src="/icon6.png"
               alt=""
               className="object-contain w-full h-full"
             />
