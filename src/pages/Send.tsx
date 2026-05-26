@@ -18,10 +18,20 @@ export default function Send() {
     if (navigator.vibrate) navigator.vibrate(50);
   };
 
+  interface StickersResponse {
+  stickers: {
+    urls: string[];
+    links: string[];
+  };
+}
+
+export default function Send() {
+  
+
   useEffect(() => {
     fetch(`${WORKER}/api/admin`)
-      .then((res) => res.json())
-      .then((data: any) => {
+      .then((res) => res.json() as Promise<StickersResponse>)
+      .then((data) => {
         if (data?.stickers?.urls) {
           setIcons(
             data.stickers.urls.map((url: string, i: number) => ({

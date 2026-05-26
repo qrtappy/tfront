@@ -45,7 +45,19 @@ export default function Receive() {
       });
 
       if (res.ok) {
-        const data = (await res.json()) as any;
+        interface Photo {
+          key: string;
+          uploaded: string;
+          url: string;
+        }
+
+        interface ReceiveResponse {
+          firstTime: boolean;
+          photos: Photo[];
+          nextCursor: string | null;
+        }
+
+        const data = (await res.json()) as ReceiveResponse;
 
         if ("Notification" in window && Notification.permission === "default") {
           Notification.requestPermission();
@@ -53,7 +65,7 @@ export default function Receive() {
 
         const photos = data.photos || [];
         const newLogs: LogItem[] = photos
-          .map((p: any) => ({
+          .map((p: Photo) => ({
             id: p.key,
             src: `${WORKER}/api/photo/view/${encodeURIComponent(p.key)}`,
             displayTime: new Date(p.uploaded).toLocaleTimeString("ko-KR", {

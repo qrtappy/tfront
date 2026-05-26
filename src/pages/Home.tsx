@@ -1,12 +1,19 @@
 import { useState, useEffect } from "react";
 
 export default function Home() {
-  const [installEvent, setInstallEvent] = useState<any>(null);
+  interface BeforeInstallPromptEvent extends Event {
+    prompt(): Promise<void>;
+    userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+  }
+
+  // 2. 정의한 타입 적용
+  const [installEvent, setInstallEvent] =
+    useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
-    const handleBeforeInstall = (e: any) => {
+    const handleBeforeInstall = (e: Event) => {
       e.preventDefault();
-      setInstallEvent(e);
+      setInstallEvent(e as BeforeInstallPromptEvent); // 3. 타입 안전하게 지정
     };
     window.addEventListener("beforeinstallprompt", handleBeforeInstall);
     return () =>
