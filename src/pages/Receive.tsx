@@ -258,18 +258,6 @@ export default function Receive() {
         <div className="fixed bottom-0 w-full max-w-[430px] bg-white border-t border-gray-100 flex justify-between items-center px-10 py-6 z-50">
           <button
             onClick={() => {
-              // 아무 기능도 수행하지 않음
-            }}
-            className="w-[25px] h-[25px] active:scale-90"
-          >
-            <img
-              src="/icon2.png"
-              alt=""
-              className="object-contain w-full h-full"
-            />
-          </button>
-          <button
-            onClick={() => {
               triggerHaptic();
               if (isDeleteMode) {
                 setIsDeleteMode(false);
@@ -278,22 +266,44 @@ export default function Receive() {
                 window.history.back();
               }
             }}
-            className="w-[25px] h-[25px] active:scale-90"
+            className="w-[25px] h-[25px] relative active:scale-90"
           >
             <img
               src="/icon6.png"
               alt=""
-              className="object-contain w-full h-full"
+              width={25}
+              height={25}
+              className="object-contain"
             />
           </button>
+
+          {/* 아이콘 2 */}
+          <button
+            onClick={() => {
+              // 기존 기능 유지
+            }}
+            className="w-[25px] h-[25px] relative active:scale-90"
+          >
+            <img
+              src="/icon2.png"
+              alt=""
+              width={25}
+              height={25}
+              className="object-contain"
+            />
+          </button>
+
+          {/* 아이콘 4 */}
           <button
             onClick={handleDelete}
-            className="w-[25px] h-[25px] active:scale-90"
+            className="w-[25px] h-[25px] relative active:scale-90"
           >
             <img
               src="/ICON4.png"
               alt=""
-              className="object-contain w-full h-full"
+              width={25}
+              height={25}
+              className="object-contain"
             />
           </button>
         </div>
