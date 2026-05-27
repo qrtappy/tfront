@@ -10,8 +10,16 @@ interface LogItem {
 }
 
 export default function Receive() {
-  const [id, setId] = useState("");
-  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [id, setId] = useState(localStorage.getItem("uniqueId") || "");
+  const [password, setPassword] = useState(
+    localStorage.getItem("autoSave") === "true"
+      ? localStorage.getItem("password") || ""
+      : "",
+  );
+  const [autoSave, setAutoSave] = useState(
+    localStorage.getItem("autoSave") === "true",
+  );
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authError, setAuthError] = useState(false);
   const [logs, setLogs] = useState<LogItem[]>([]);
@@ -78,8 +86,14 @@ export default function Receive() {
 
         setLogs(newLogs);
         setIsAuthenticated(true);
-        localStorage.setItem(`auth_${id}`, inputPw);
-        localStorage.setItem("my_room_id", id);
+        localStorage.setItem("uniqueId", id);
+        if (autoSave) {
+          localStorage.setItem("password", inputPw);
+          localStorage.setItem("autoSave", "true");
+        } else {
+          localStorage.removeItem("password");
+          localStorage.setItem("autoSave", "false");
+        }
       } else {
         setAuthError(true);
         setIsAuthenticated(false);
@@ -159,17 +173,42 @@ export default function Receive() {
                 className="w-full bg-white border-2 border-gray-300 rounded-2xl px-6 py-5 text-center text-sm focus:outline-none focus:border-gray-400 transition-all mb-4 shadow-sm placeholder:text-[10px] placeholder:uppercase placeholder:tracking-[0.2em] placeholder:text-gray-300"
                 placeholder="ID ADDRESS"
               />
-              <input
-                type="text"
-                value={password}
-                onChange={(e) => {
-                  triggerHaptic();
-                  setPassword(e.target.value);
-                }}
-                onKeyDown={(e) => e.key === "Enter" && handleAuth(password)}
-                className="w-full bg-white border-2 border-gray-300 rounded-2xl px-6 py-5 text-center text-sm focus:outline-none focus:border-gray-400 transition-all mb-8 shadow-sm placeholder:text-[10px] placeholder:uppercase placeholder:tracking-[0.2em] placeholder:text-gray-300"
-                placeholder="PASSWORD"
-              />
+
+              <div className="w-full relative mb-2">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => {
+                    triggerHaptic();
+                    setPassword(e.target.value);
+                  }}
+                  onKeyDown={(e) => e.key === "Enter" && handleAuth(password)}
+                  className="w-full bg-white border-2 border-gray-300 rounded-2xl px-6 py-5 text-center text-sm focus:outline-none focus:border-gray-400 transition-all shadow-sm placeholder:text-[10px] placeholder:uppercase placeholder:tracking-[0.2em] placeholder:text-gray-300"
+                  placeholder="PASSWORD"
+                />
+                <button
+                  type="button"
+                  className="absolute right-4 top-5 text-[10px] text-gray-400 uppercase"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? "HIDE" : "SHOW"}
+                </button>
+              </div>
+
+              <label className="flex items-center gap-2 mb-8 text-[10px] text-gray-500 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={autoSave}
+                  onChange={(e) => {
+                    setAutoSave(e.target.checked);
+                    if (!e.target.checked) {
+                      localStorage.removeItem("password");
+                      localStorage.setItem("autoSave", "false");
+                    }
+                  }}
+                />
+                자동 저장
+              </label>
               <button
                 onClick={() => handleAuth(password)}
                 className="w-[65px] h-[65px] border-[3px] border-black rounded-full flex items-center justify-center group hover:bg-black active:bg-black transition-all duration-300 active:scale-90 shadow-md"
@@ -280,7 +319,9 @@ export default function Receive() {
           {/* 아이콘 2 */}
           <button
             onClick={() => {
-              // 기존 기능 유지
+              triggerHaptic();
+              setIsDeleteMode(false);
+              setSelectedIds([]);
             }}
             className="w-[25px] h-[25px] relative active:scale-90"
           >

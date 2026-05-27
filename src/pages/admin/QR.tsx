@@ -31,15 +31,15 @@ function HiddenQR({ id, url, onReady }: HiddenQRProps) {
         id={`qr-${id}`}
         value={url}
         size={512}
-        level="L"
+        level="M"
         includeMargin={true}
         imageSettings={{
           src: "/icon-192x192.png",
           height: 80,
           width: 80,
           excavate: true,
-          x: 512 - 80 - 10,
-          y: 512 - 80 - 10,
+          x: 216,
+          y: 216,
         }}
         ref={() => {
           setTimeout(() => {
