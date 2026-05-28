@@ -1,4 +1,7 @@
+// src/pages/Receive.tsx
+// 로그인 부분 제거 — 나머지 기능 그대로 유지
 import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 const WORKER = "https://tback.qrtappy.workers.dev";
 
@@ -10,6 +13,8 @@ interface LogItem {
 }
 
 export default function Receive() {
+  const navigate = useNavigate();
+
   const [logs, setLogs] = useState<LogItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isDeleteMode, setIsDeleteMode] = useState(false);
@@ -18,56 +23,79 @@ export default function Receive() {
   const isLongPress = useRef(false);
   const timerRef = useRef<number | null>(null);
 
-  const currentUrl = window.location.href;
-
-  const hiddenLogs: string[] =
-    typeof window !== "undefined"
-      ? JSON.parse(localStorage.getItem("hidden_logs") || "[]")
-      : [];
+  const hiddenLogs: string[] = JSON.parse(
+    localStorage.getItem("hidden_logs") || "[]",
+  );
 
   const triggerHaptic = () => {
     if (window.navigator.vibrate) window.navigator.vibrate(10);
   };
 
-  // 페이지 진입 시 로그인 정보를 판별하여 자동으로 데이터를 가져오는 훅 추가
-  useEffect(() => {
-    const savedId = localStorage.getItem("uniqueId");
-    const savedPassword = localStorage.getItem("password");
+  // 2. 이제 loadPhotos 함수가 온전히 시작됨
+  const loadPhotos = async (uniqueId: string) => {
+    const savedPw = localStorage.getItem("password") || "";
+    if (!savedPw) {
+      navigate("/login");
+      return;
+    }
 
-    if (savedId && savedPassword) {
-      fetch(`${WORKER}/api/qr/receive`, {
+    try {
+      const res = await fetch(`${WORKER}/api/qr/receive`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: savedId, password: savedPassword }),
-      })
-        .then((res) => {
-          if (res.ok) return res.json();
-          throw new Error("인증 실패");
-        })
-        .then((data: { photos?: { key: string; uploaded: string }[] }) => {
-          const photos = data.photos || [];
-          const newLogs: LogItem[] = photos
-            .map((p: { key: string; uploaded: string }) => ({
-              id: p.key,
-              src: `${WORKER}/api/photo/view/${encodeURIComponent(p.key)}`,
-              displayTime: new Date(p.uploaded).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              }),
-              timestamp: new Date(p.uploaded).getTime(),
-            }))
-            .filter((log: LogItem) => !hiddenLogs.includes(log.id));
-          setLogs(newLogs);
-        })
-        .catch((error) => {
-          console.error("데이터 로드 실패:", error);
-          window.location.href = "/login";
-        });
-    } else {
-      window.location.href = "/login";
-    }
-  }, []);
+        body: JSON.stringify({ id: uniqueId, password: savedPw }),
+      });
 
+      if (!res.ok) {
+        // 비번 틀리면 로그인 페이지로
+        navigate("/login");
+        return;
+      }
+
+      interface Photo {
+        key: string;
+        uploaded: string;
+        url: string;
+      }
+      interface ReceiveResponse {
+        firstTime: boolean;
+        photos: Photo[];
+        nextCursor: string | null;
+      }
+
+      const data = (await res.json()) as ReceiveResponse;
+      const photos = data.photos || [];
+
+      const newLogs: LogItem[] = photos
+        .map((p: Photo) => ({
+          id: p.key,
+          src: `${WORKER}/api/photo/view/${encodeURIComponent(p.key)}`,
+          displayTime: new Date(p.uploaded).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          timestamp: new Date(p.uploaded).getTime(),
+        }))
+        .filter((log: LogItem) => !hiddenLogs.includes(log.id));
+
+      setLogs(newLogs);
+    } catch (error) {
+      console.error("error:", error);
+    }
+  };
+
+  useEffect(() => {
+    const savedId = localStorage.getItem("uniqueId");
+    if (!savedId) {
+      navigate("/login");
+      return;
+    }
+    // 이제 에러 없이 정상 호출됩니다.
+    const fetchAsync = async () => {
+      await loadPhotos(savedId);
+    };
+    fetchAsync();
+  }, [navigate]);
   const toggleSelect = (logId: string) => {
     triggerHaptic();
     setSelectedIds((prev) =>
@@ -117,15 +145,16 @@ export default function Receive() {
   return (
     <div className="flex justify-center min-h-screen bg-gray-50 select-none">
       <div className="w-full max-w-[430px] min-h-screen bg-white flex flex-col relative shadow-xl overflow-hidden">
+        {/* 상단 URL 표시 */}
         <div className="p-6 pb-2 flex justify-center items-center relative z-10">
           <div className="w-full bg-gray-100 rounded-full px-4 py-2 border border-gray-200 flex items-center justify-center">
             <span className="text-[10px] text-gray-400 font-mono truncate">
-              {currentUrl}
+              {window.location.href}
             </span>
           </div>
         </div>
 
-        {/* 삼항연산자 분기 제거, 로그인 확인 없이 바로 데이터 목록 레이아웃을 렌더링 */}
+        {/* 사진 그리드 */}
         <div className="grow p-4 grid grid-cols-4 gap-2 h-fit">
           {logs.map((log) => (
             <div
@@ -160,6 +189,7 @@ export default function Receive() {
           ))}
         </div>
 
+        {/* 사진 확대 */}
         {viewDetail && (
           <div className="fixed inset-0 bg-white/95 z-[70] flex flex-col items-center justify-center p-4 pb-32">
             <button
@@ -185,6 +215,7 @@ export default function Receive() {
           </div>
         )}
 
+        {/* 하단 버튼 */}
         <div className="fixed bottom-0 w-full max-w-[430px] bg-white border-t border-gray-100 flex justify-between items-center px-10 py-6 z-50">
           <button
             onClick={() => {
@@ -214,7 +245,13 @@ export default function Receive() {
             }}
             className="w-[25px] h-[25px] relative active:scale-90"
           >
-            <img src="/Icon2.png" alt="" className="object-contain" />
+            <img
+              src="/Icon2.png"
+              alt=""
+              width={25}
+              height={25}
+              className="object-contain"
+            />
           </button>
           <button
             onClick={handleDelete}
