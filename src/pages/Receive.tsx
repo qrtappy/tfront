@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 const WORKER = "https://tback.qrtappy.workers.dev";
 
@@ -10,18 +10,6 @@ interface LogItem {
 }
 
 export default function Receive() {
-  const [showPassword, setShowPassword] = useState(false);
-  const [id, setId] = useState(localStorage.getItem("uniqueId") || "");
-  const [password, setPassword] = useState(
-    localStorage.getItem("autoSave") === "true"
-      ? localStorage.getItem("password") || ""
-      : "",
-  );
-  const [autoSave, setAutoSave] = useState(
-    localStorage.getItem("autoSave") === "true",
-  );
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [authError, setAuthError] = useState(false);
   const [logs, setLogs] = useState<LogItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isDeleteMode, setIsDeleteMode] = useState(false);
@@ -41,67 +29,44 @@ export default function Receive() {
     if (window.navigator.vibrate) window.navigator.vibrate(10);
   };
 
-  const handleAuth = async (inputPw: string) => {
-    if (!inputPw || !id) return;
-    if (navigator.vibrate) navigator.vibrate(50);
+  // 페이지 진입 시 로그인 정보를 판별하여 자동으로 데이터를 가져오는 훅 추가
+  useEffect(() => {
+    const savedId = localStorage.getItem("uniqueId");
+    const savedPassword = localStorage.getItem("password");
 
-    try {
-      const res = await fetch(`${WORKER}/api/qr/receive`, {
+    if (savedId && savedPassword) {
+      fetch(`${WORKER}/api/qr/receive`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, password: inputPw }),
-      });
-
-      if (res.ok) {
-        interface Photo {
-          key: string;
-          uploaded: string;
-          url: string;
-        }
-
-        interface ReceiveResponse {
-          firstTime: boolean;
-          photos: Photo[];
-          nextCursor: string | null;
-        }
-
-        const data = (await res.json()) as ReceiveResponse;
-
-        if ("Notification" in window && Notification.permission === "default") {
-          Notification.requestPermission();
-        }
-
-        const photos = data.photos || [];
-        const newLogs: LogItem[] = photos
-          .map((p: Photo) => ({
-            id: p.key,
-            src: `${WORKER}/api/photo/view/${encodeURIComponent(p.key)}`,
-            displayTime: new Date(p.uploaded).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            }),
-            timestamp: new Date(p.uploaded).getTime(),
-          }))
-          .filter((log: LogItem) => !hiddenLogs.includes(log.id));
-
-        setLogs(newLogs);
-        setIsAuthenticated(true);
-        localStorage.setItem("uniqueId", id);
-        if (autoSave) {
-          localStorage.setItem("password", inputPw);
-          localStorage.setItem("autoSave", "true");
-        } else {
-          localStorage.removeItem("password");
-          localStorage.setItem("autoSave", "false");
-        }
-      } else {
-        setAuthError(true);
-        setIsAuthenticated(false);
-      }
-    } catch (error) {
-      console.error("error:", error);
+        body: JSON.stringify({ id: savedId, password: savedPassword }),
+      })
+        .then((res) => {
+          if (res.ok) return res.json();
+          throw new Error("인증 실패");
+        })
+        .then((data: { photos?: { key: string; uploaded: string }[] }) => {
+          const photos = data.photos || [];
+          const newLogs: LogItem[] = photos
+            .map((p: { key: string; uploaded: string }) => ({
+              id: p.key,
+              src: `${WORKER}/api/photo/view/${encodeURIComponent(p.key)}`,
+              displayTime: new Date(p.uploaded).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
+              timestamp: new Date(p.uploaded).getTime(),
+            }))
+            .filter((log: LogItem) => !hiddenLogs.includes(log.id));
+          setLogs(newLogs);
+        })
+        .catch((error) => {
+          console.error("데이터 로드 실패:", error);
+          window.location.href = "/login";
+        });
+    } else {
+      window.location.href = "/login";
     }
-  };
+  }, []);
 
   const toggleSelect = (logId: string) => {
     triggerHaptic();
@@ -160,117 +125,43 @@ export default function Receive() {
           </div>
         </div>
 
-        {!isAuthenticated ? (
-          <div className="grow flex flex-col items-center justify-center p-8 bg-white z-[60]">
-            <div className="w-full max-w-[320px] flex flex-col items-center">
-              <input
-                type="text"
-                value={id}
-                onChange={(e) => {
-                  triggerHaptic();
-                  setId(e.target.value);
-                }}
-                className="w-full bg-white border-2 border-gray-300 rounded-2xl px-6 py-5 text-center text-sm focus:outline-none focus:border-gray-400 transition-all mb-4 shadow-sm placeholder:text-[10px] placeholder:uppercase placeholder:tracking-[0.2em] placeholder:text-gray-300"
-                placeholder="ID ADDRESS"
+        {/* 삼항연산자 분기 제거, 로그인 확인 없이 바로 데이터 목록 레이아웃을 렌더링 */}
+        <div className="grow p-4 grid grid-cols-4 gap-2 h-fit">
+          {logs.map((log) => (
+            <div
+              key={log.id}
+              onPointerDown={() => handlePointerDown(log.id)}
+              onPointerUp={(e) => handlePointerUp(e, log)}
+              onContextMenu={(e) => e.preventDefault()}
+              className={`relative aspect-square bg-gray-100 rounded-lg overflow-hidden border transition-all select-none ${
+                selectedIds.includes(log.id)
+                  ? "ring-2 ring-[#F9D015] scale-95"
+                  : ""
+              }`}
+            >
+              <img
+                src={log.src}
+                alt=""
+                className="w-full h-full object-cover"
               />
-
-              <div className="w-full relative mb-2">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => {
-                    triggerHaptic();
-                    setPassword(e.target.value);
-                  }}
-                  onKeyDown={(e) => e.key === "Enter" && handleAuth(password)}
-                  className="w-full bg-white border-2 border-gray-300 rounded-2xl px-6 py-5 text-center text-sm focus:outline-none focus:border-gray-400 transition-all shadow-sm placeholder:text-[10px] placeholder:uppercase placeholder:tracking-[0.2em] placeholder:text-gray-300"
-                  placeholder="PASSWORD"
-                />
-                <button
-                  type="button"
-                  className="absolute right-4 top-5 text-[10px] text-gray-400 uppercase"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? "HIDE" : "SHOW"}
-                </button>
+              <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-sm">
+                {log.displayTime}
               </div>
-
-              <label className="flex items-center gap-2 mb-8 text-[10px] text-gray-500 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={autoSave}
-                  onChange={(e) => {
-                    setAutoSave(e.target.checked);
-                    if (!e.target.checked) {
-                      localStorage.removeItem("password");
-                      localStorage.setItem("autoSave", "false");
-                    }
-                  }}
-                />
-                자동 저장
-              </label>
-              <button
-                onClick={() => handleAuth(password)}
-                className="w-[65px] h-[65px] border-[3px] border-black rounded-full flex items-center justify-center group hover:bg-black active:bg-black transition-all duration-300 active:scale-90 shadow-md"
-              >
-                <svg
-                  width="28"
-                  height="28"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  className="stroke-black group-hover:stroke-white group-active:stroke-white transition-colors"
-                  strokeWidth="3.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M5 12h14M12 5l7 7-7 7" />
-                </svg>
-              </button>
-              {authError && (
-                <p className="text-red-500 text-[10px] mt-6 font-bold tracking-tight">
-                  INVALID PASSWORD. PLEASE TRY AGAIN.
-                </p>
+              {isDeleteMode && (
+                <div className="absolute top-1 left-1 w-6 h-6 rounded-full border-2 border-white bg-black/20 flex items-center justify-center">
+                  {selectedIds.includes(log.id) && (
+                    <div className="w-4 h-4 bg-[#F9D015] rounded-full text-[10px] flex items-center justify-center font-bold">
+                      ✓
+                    </div>
+                  )}
+                </div>
               )}
             </div>
-          </div>
-        ) : (
-          <div className="grow p-4 grid grid-cols-4 gap-2 h-fit">
-            {logs.map((log) => (
-              <div
-                key={log.id}
-                onPointerDown={() => handlePointerDown(log.id)}
-                onPointerUp={(e) => handlePointerUp(e, log)}
-                onContextMenu={(e) => e.preventDefault()}
-                className={`relative aspect-square bg-gray-100 rounded-lg overflow-hidden border transition-all select-none ${
-                  selectedIds.includes(log.id)
-                    ? "ring-2 ring-[#F9D015] scale-95"
-                    : ""
-                }`}
-              >
-                <img
-                  src={log.src}
-                  alt=""
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-sm">
-                  {log.displayTime}
-                </div>
-                {isDeleteMode && (
-                  <div className="absolute top-1 left-1 w-6 h-6 rounded-full border-2 border-white bg-black/20 flex items-center justify-center">
-                    {selectedIds.includes(log.id) && (
-                      <div className="w-4 h-4 bg-[#F9D015] rounded-full text-[10px] flex items-center justify-center font-bold">
-                        ✓
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+          ))}
+        </div>
 
         {viewDetail && (
-          <div className="fixed inset-0 bg-white/95 z-[40] flex flex-col items-center justify-center p-4 pb-32">
+          <div className="fixed inset-0 bg-white/95 z-[70] flex flex-col items-center justify-center p-4 pb-32">
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -315,8 +206,6 @@ export default function Receive() {
               className="object-contain"
             />
           </button>
-
-          {/* 아이콘 2 */}
           <button
             onClick={() => {
               triggerHaptic();
@@ -325,16 +214,8 @@ export default function Receive() {
             }}
             className="w-[25px] h-[25px] relative active:scale-90"
           >
-            <img
-              src="/icon2.png"
-              alt=""
-              width={25}
-              height={25}
-              className="object-contain"
-            />
+            <img src="/Icon2.png" alt="" className="object-contain" />
           </button>
-
-          {/* 아이콘 4 */}
           <button
             onClick={handleDelete}
             className="w-[25px] h-[25px] relative active:scale-90"
