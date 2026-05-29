@@ -86,6 +86,15 @@ export default function Receive() {
 
   useEffect(() => {
     const savedId = localStorage.getItem("uniqueId");
+    const currentUrl = decodeURIComponent(window.location.href);
+
+    // 🚨 다른 방 주소(유저 ID)로 강제 진입 시 카톡식 원천 차단
+    if (savedId && !currentUrl.includes(savedId)) {
+      alert("Only one room allowed.");
+      navigate("/login"); // 즉시 로그인 페이지로 튕겨내기
+      return;
+    }
+
     if (!savedId) {
       navigate("/login");
       return;
@@ -96,6 +105,7 @@ export default function Receive() {
     };
     fetchAsync();
   }, [navigate]);
+
   const toggleSelect = (logId: string) => {
     triggerHaptic();
     setSelectedIds((prev) =>
@@ -155,22 +165,15 @@ export default function Receive() {
         </div>
 
         {/* 사진 그리드 */}
+
         <div className="grow p-4 grid grid-cols-4 gap-2 h-fit">
           {logs.map((log) => (
             <div
               key={log.id}
-              onTouchStart={() => {
-                triggerHaptic(); // 누를 때 즉시 진동
-              }}
-              onTouchEnd={(e) => {
-                e.preventDefault(); // 스크롤 씹힘 방지
-                if (isDeleteMode) {
-                  toggleSelect(log.id);
-                } else {
-                  triggerHaptic(); // 손 뗄 때 진동
-                  setViewDetail(log.src); // 즉시 사진 확대
-                }
-              }}
+              //  이미 상단에 완벽하게 만들어 두신 원래의 포인터 함수들로 연결합니다.
+              onPointerDown={() => handlePointerDown(log.id)}
+              onPointerUp={(e) => handlePointerUp(e, log)}
+              onContextMenu={(e) => e.preventDefault()} // 모바일 우클릭 메뉴 방지
               className={`relative aspect-square bg-gray-100 rounded-lg overflow-hidden border transition-all select-none [-webkit-tap-highlight-color:transparent] ${
                 selectedIds.includes(log.id)
                   ? "ring-2 ring-[#F9D015] scale-95"

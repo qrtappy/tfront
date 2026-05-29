@@ -1,7 +1,7 @@
 {
   "name": "TAPTAPQR",
   "short_name": "TAPTAP",
-  "start_url": "/intro",
+  "start_url": "/login",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#000000",
