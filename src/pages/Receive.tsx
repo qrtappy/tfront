@@ -159,10 +159,19 @@ export default function Receive() {
           {logs.map((log) => (
             <div
               key={log.id}
-              onPointerDown={() => handlePointerDown(log.id)}
-              onPointerUp={(e) => handlePointerUp(e, log)}
-              onContextMenu={(e) => e.preventDefault()}
-              className={`relative aspect-square bg-gray-100 rounded-lg overflow-hidden border transition-all select-none ${
+              onTouchStart={() => {
+                triggerHaptic(); // 누를 때 즉시 진동
+              }}
+              onTouchEnd={(e) => {
+                e.preventDefault(); // 스크롤 씹힘 방지
+                if (isDeleteMode) {
+                  toggleSelect(log.id);
+                } else {
+                  triggerHaptic(); // 손 뗄 때 진동
+                  setViewDetail(log.src); // 즉시 사진 확대
+                }
+              }}
+              className={`relative aspect-square bg-gray-100 rounded-lg overflow-hidden border transition-all select-none [-webkit-tap-highlight-color:transparent] ${
                 selectedIds.includes(log.id)
                   ? "ring-2 ring-[#F9D015] scale-95"
                   : ""
@@ -246,7 +255,7 @@ export default function Receive() {
             className="w-[25px] h-[25px] relative active:scale-90"
           >
             <img
-              src="/Icon2.png"
+              src="/ICON2.png"
               alt=""
               width={25}
               height={25}
