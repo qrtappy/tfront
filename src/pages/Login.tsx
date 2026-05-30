@@ -135,13 +135,9 @@ export default function Login() {
               <button
                 type="button"
                 className="absolute right-5 top-1/2 -translate-y-1/2 flex items-center justify-center"
-                onMouseDown={(e) => {
-                  e.preventDefault(); // 웹에서 자판 사라짐 방지
-                  setShowPassword(!showPassword);
-                }}
-                onTouchStart={(e) => {
-                  e.preventDefault(); // 모바일에서 자판 사라짐 방지
-                  setShowPassword(!showPassword);
+                onClick={() => {
+                  navigator.vibrate?.(10); // 약한 진동
+                  setShowPassword(!showPassword); // 기본 클릭 토글로 복구
                 }}
               >
                 {showPassword ? (
@@ -166,6 +162,7 @@ export default function Login() {
                 type="checkbox"
                 checked={autoSave}
                 onChange={(e) => {
+                  navigator.vibrate?.(10);
                   setAutoSave(e.target.checked);
                   if (!e.target.checked) {
                     localStorage.removeItem("password");
@@ -179,7 +176,10 @@ export default function Login() {
 
             {/* 화살표 버튼 (흰색 바탕, 커서/클릭 시 연한 회색 및 크기 확대 효과) */}
             <button
-              onClick={() => handleAuth(id, password)}
+              onClick={() => {
+                navigator.vibrate?.(10); // 약한 진동
+                handleAuth(id, password);
+              }}
               disabled={isLoading}
               className="w-[65px] h-[65px] bg-white rounded-full flex items-center justify-center transition-all duration-200 hover:bg-gray-100 active:bg-gray-200 hover:scale-110 active:scale-110 shadow-md disabled:opacity-50"
             >
