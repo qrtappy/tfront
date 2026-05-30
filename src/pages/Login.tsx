@@ -1,6 +1,7 @@
 // src/pages/Login.tsx
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { messaging, getToken } from "../firebase";
 
 const WORKER = "https://tback.qrtappy.workers.dev";
 
@@ -47,24 +48,38 @@ export default function Login() {
     setIsLoading(true);
     setAuthError(false);
 
+    let fcmToken = "";
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === "granted" && messaging) {
+        fcmToken = await getToken(messaging, {
+          vapidKey:
+            "BB_EG243UCmE4XHpd1LkM4RsVLeqN-KXRayAomJPklo0rwEgDEhqcyOqep4Gh_b3O1FhecdsPsfDbaOYolwmY-4",
+        });
+      }
+    } catch (e) {
+      console.warn("FCM 토큰 실패", e);
+    }
+
     try {
       const res = await fetch(`${WORKER}/api/qr/receive`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: inputId, password: inputPw }),
+        body: JSON.stringify({
+          id: inputId,
+          password: inputPw,
+          token: fcmToken,
+        }),
       });
 
       if (res.ok) {
-        // localStorage 저장 (리시브 페이지 진입을 위해 password도 필수 저장)
         localStorage.setItem("uniqueId", inputId);
         localStorage.setItem("password", inputPw);
-
         if (autoSave) {
           localStorage.setItem("autoSave", "true");
         } else {
           localStorage.setItem("autoSave", "false");
         }
-        // 사진함으로 이동
         navigate("/receive");
       } else {
         setAuthError(true);
