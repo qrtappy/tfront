@@ -13,7 +13,6 @@ export default function Receive() {
   const [logs, setLogs] = useState<LogItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isDeleteMode, setIsDeleteMode] = useState(false);
-  const [viewDetail, setViewDetail] = useState<string | null>(null);
 
   const isLongPress = useRef(false);
   const timerRef = useRef<number | null>(null);
@@ -31,8 +30,19 @@ export default function Receive() {
 
   // 페이지 진입 시 로그인 정보를 판별하여 자동으로 데이터를 가져오는 훅 추가
   useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlId = urlParams.get("id");
+
     const savedId = localStorage.getItem("uniqueId");
     const savedPassword = localStorage.getItem("password");
+
+    // 다른 방 주소로 접근 시 자동 로그인을 보호하고 진입을 차단합니다.
+    if (urlId && savedId && urlId !== savedId) {
+      alert(
+        "Another room is already auto-saved. Please log out first if you want to enter a new room.",
+      );
+      // 로그인 페이지로 튕겨내는 코드와 return을 지워서 기존 방 데이터가 자연스럽게 연결되도록 둡니다.
+    }
 
     if (savedId && savedPassword) {
       fetch(`${WORKER}/api/qr/receive`, {
@@ -93,9 +103,6 @@ export default function Receive() {
     }
     if (isDeleteMode) {
       toggleSelect(log.id);
-    } else {
-      triggerHaptic();
-      setViewDetail(log.src);
     }
   };
 
@@ -126,14 +133,14 @@ export default function Receive() {
         </div>
 
         {/* 삼항연산자 분기 제거, 로그인 확인 없이 바로 데이터 목록 레이아웃을 렌더링 */}
-        <div className="grow p-4 grid grid-cols-4 gap-2 h-fit">
+        <div className="grow p-4 grid grid-cols-2 gap-2 content-start h-fit">
           {logs.map((log) => (
             <div
               key={log.id}
               onPointerDown={() => handlePointerDown(log.id)}
               onPointerUp={(e) => handlePointerUp(e, log)}
               onContextMenu={(e) => e.preventDefault()}
-              className={`relative aspect-square bg-gray-100 rounded-lg overflow-hidden border transition-all select-none ${
+              className={`relative aspect-[2/3] bg-gray-100 rounded-lg overflow-hidden transition-all select-none ${
                 selectedIds.includes(log.id)
                   ? "ring-2 ring-[#F9D015] scale-95"
                   : ""
@@ -144,7 +151,7 @@ export default function Receive() {
                 alt=""
                 className="w-full h-full object-cover"
               />
-              <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-sm">
+              <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[8px] px-1 py-0.5 rounded-sm">
                 {log.displayTime}
               </div>
               {isDeleteMode && (
@@ -159,31 +166,6 @@ export default function Receive() {
             </div>
           ))}
         </div>
-
-        {viewDetail && (
-          <div className="fixed inset-0 bg-white/95 z-[40] flex flex-col items-center justify-center p-4 pb-32">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                triggerHaptic();
-                setViewDetail(null);
-              }}
-              className="absolute top-10 right-8 w-12 h-12 bg-gray-200/50 rounded-full text-2xl font-bold z-[110] flex items-center justify-center active:scale-90"
-            >
-              ✕
-            </button>
-            <div
-              className="relative w-full h-full max-w-[430px]"
-              onClick={() => setViewDetail(null)}
-            >
-              <img
-                src={viewDetail}
-                alt=""
-                className="w-full h-full object-contain"
-              />
-            </div>
-          </div>
-        )}
 
         <div className="fixed bottom-0 w-full max-w-[430px] bg-white border-t border-gray-100 flex justify-between items-center px-10 py-6 z-50">
           <button
@@ -214,7 +196,7 @@ export default function Receive() {
             }}
             className="w-[25px] h-[25px] relative active:scale-90"
           >
-            <img src="/Icon2.png" alt="" className="object-contain" />
+            <img src="/ICON2.png" alt="" className="object-contain" />
           </button>
           <button
             onClick={handleDelete}

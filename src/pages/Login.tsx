@@ -21,7 +21,6 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
 
   // 재방문 시 자동 로그인
-
   useEffect(() => {
     const savedId = localStorage.getItem("uniqueId");
     const savedPw = localStorage.getItem("password");
@@ -80,10 +79,11 @@ export default function Login() {
 
   return (
     <div className="flex justify-center min-h-screen bg-gray-50 select-none">
-      <div className="w-full max-w-[430px] min-h-screen bg-white flex flex-col relative shadow-xl overflow-hidden">
+      {/* 배경색을 이미지와 동일한 노란색(#E9C043)으로 변경 */}
+      <div className="w-full max-w-[430px] min-h-screen bg-[#E9C043] flex flex-col relative shadow-xl overflow-hidden">
         {/* 상단 URL 표시 */}
         <div className="p-6 pb-2 flex justify-center items-center relative z-10">
-          <div className="w-full bg-gray-100 rounded-full px-4 py-2 border border-gray-200 flex items-center justify-center">
+          <div className="w-full bg-[#F8E297] rounded-full px-4 py-2 flex items-center justify-center shadow-sm">
             <span className="text-[10px] text-gray-400 font-mono truncate">
               {window.location.href}
             </span>
@@ -91,9 +91,22 @@ export default function Login() {
         </div>
 
         {/* 로그인 폼 */}
-        <div className="grow flex flex-col items-center justify-center p-8 bg-white">
+        <div className="grow flex flex-col items-center justify-center p-8">
           <div className="w-full max-w-[320px] flex flex-col items-center">
-            {/* ID 입력 */}
+            {/* 꼬깔 이미지 및 타이틀 추가 */}
+            <img
+              src="/main22.png"
+              alt="Cones"
+              className="w-[140px] h-auto object-contain mb-6"
+            />
+            <span className="text-white text-[11px] font-bold tracking-[0.15em] uppercase mb-1 opacity-90">
+              YOUR SECRET QRCODE
+            </span>
+            <h1 className="text-white text-4xl font-black italic tracking-wide mb-8">
+              TAPTAPQR
+            </h1>
+
+            {/* ID 입력 (테두리 제거, 플레이스홀더 변경) */}
             <input
               type="text"
               value={id}
@@ -101,11 +114,11 @@ export default function Login() {
                 setId(e.target.value);
                 setAuthError(false);
               }}
-              className="w-full bg-white border-2 border-gray-300 rounded-2xl px-6 py-5 text-center text-sm focus:outline-none focus:border-gray-400 transition-all mb-4 shadow-sm placeholder:text-[10px] placeholder:uppercase placeholder:tracking-[0.2em] placeholder:text-gray-300"
-              placeholder="ID ADDRESS"
+              className="w-full bg-white rounded-2xl px-6 py-5 text-center text-sm focus:outline-none transition-all mb-4 shadow-sm placeholder:text-sm placeholder:text-gray-300"
+              placeholder="Unique ID"
             />
 
-            {/* 비밀번호 입력 */}
+            {/* 비밀번호 입력 (테두리 제거, 플레이스홀더 변경) */}
             <div className="w-full relative mb-2">
               <input
                 type={showPassword ? "text" : "password"}
@@ -115,35 +128,40 @@ export default function Login() {
                   setAuthError(false);
                 }}
                 onKeyDown={(e) => e.key === "Enter" && handleAuth(id, password)}
-                className="w-full bg-white border-2 border-gray-300 rounded-2xl px-6 py-5 text-center text-sm focus:outline-none focus:border-gray-400 transition-all shadow-sm placeholder:text-[10px] placeholder:uppercase placeholder:tracking-[0.2em] placeholder:text-gray-300"
-                placeholder="PASSWORD"
+                className="w-full bg-white rounded-2xl px-6 py-5 text-center text-sm focus:outline-none transition-all shadow-sm placeholder:text-sm placeholder:text-gray-300"
+                placeholder="Password"
               />
-              {/* 눈 모양 아이콘 -> public 폴더 안의 pass1.png / pass2.png 이미지로 교체 */}
+              {/* 눈 모양 아이콘 (onMouseDown과 onTouchStart로 자판 유지 설정) */}
               <button
                 type="button"
-                className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center justify-center"
-                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-5 top-1/2 -translate-y-1/2 flex items-center justify-center"
+                onMouseDown={(e) => {
+                  e.preventDefault(); // 웹에서 자판 사라짐 방지
+                  setShowPassword(!showPassword);
+                }}
+                onTouchStart={(e) => {
+                  e.preventDefault(); // 모바일에서 자판 사라짐 방지
+                  setShowPassword(!showPassword);
+                }}
               >
                 {showPassword ? (
-                  // 비밀번호 보일 때: pass1.png
                   <img
                     src="/pass1.png"
                     alt="비밀번호 보이기"
-                    className="w-[20px] h-auto object-contain"
+                    className="w-[20px] h-auto object-contain opacity-40"
                   />
                 ) : (
-                  // 비밀번호 안 보일 때: pass2.png
                   <img
                     src="/pass2.png"
                     alt="비밀번호 숨기기"
-                    className="w-[20px] h-auto object-contain"
+                    className="w-[20px] h-auto object-contain opacity-40"
                   />
                 )}
               </button>
             </div>
 
-            {/* 자동저장 체크박스 */}
-            <label className="flex items-center gap-2 mb-8 text-[10px] text-gray-500 cursor-pointer self-start ml-2">
+            {/* 자동저장 체크박스 (영문 Auto Save 변경 및 흰색 글씨화) */}
+            <label className="flex items-center gap-2 mb-8 text-[11px] text-white font-medium cursor-pointer self-start ml-2">
               <input
                 type="checkbox"
                 checked={autoSave}
@@ -154,23 +172,23 @@ export default function Login() {
                     localStorage.setItem("autoSave", "false");
                   }
                 }}
-                className="w-3 h-3"
+                className="w-4 h-4 appearance-none bg-white rounded-[4px] border-0 cursor-pointer flex items-center justify-center checked:after:content-['✓'] checked:after:text-[10px] checked:after:text-gray-700 checked:after:font-bold focus:outline-none"
               />
-              자동 저장
+              Auto Save
             </label>
 
-            {/* 화살표 버튼 */}
+            {/* 화살표 버튼 (흰색 바탕, 커서/클릭 시 연한 회색 및 크기 확대 효과) */}
             <button
               onClick={() => handleAuth(id, password)}
               disabled={isLoading}
-              className="w-[65px] h-[65px] border-[3px] border-black rounded-full flex items-center justify-center group hover:bg-black active:bg-black transition-all duration-300 active:scale-90 shadow-md disabled:opacity-50"
+              className="w-[65px] h-[65px] bg-white rounded-full flex items-center justify-center transition-all duration-200 hover:bg-gray-100 active:bg-gray-200 hover:scale-110 active:scale-110 shadow-md disabled:opacity-50"
             >
               <svg
                 width="28"
                 height="28"
                 viewBox="0 0 24 24"
                 fill="none"
-                className="stroke-black group-hover:stroke-white group-active:stroke-white transition-colors"
+                className="stroke-[#E9C043]"
                 strokeWidth="3.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -181,7 +199,7 @@ export default function Login() {
 
             {/* 에러 메시지 */}
             {authError && (
-              <p className="text-red-500 text-[10px] mt-6 font-bold tracking-tight">
+              <p className="text-red-600 text-[10px] mt-6 font-bold tracking-tight">
                 INVALID PASSWORD. PLEASE TRY AGAIN.
               </p>
             )}
