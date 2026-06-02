@@ -79,7 +79,6 @@ export default function Receive() {
   }, []);
 
   const toggleSelect = (logId: string) => {
-    triggerHaptic();
     setSelectedIds((prev) =>
       prev.includes(logId) ? prev.filter((i) => i !== logId) : [...prev, logId],
     );

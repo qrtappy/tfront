@@ -32,34 +32,59 @@ export default function Login() {
     }
   }, []);
 
-  useEffect(() => {
-    const handleHardwareBack = () => {
-      navigate(-1);
-    };
+  // 1. 상태 변수 설정
+  const [fcmToken, setFcmToken] = useState("");
+  // 추가: 재요청 방지용 상태 (전송 클릭 시 딱 한 번만 권한 창을 띄우기 위함)
+  const [hasRequested, setHasRequested] = useState(false);
 
-    window.addEventListener("popstate", handleHardwareBack);
-    return () => {
-      window.removeEventListener("popstate", handleHardwareBack);
-    };
-  }, [navigate]);
-
-  const handleAuth = async (inputId: string, inputPw: string) => {
-    if (!inputId || !inputPw) return;
-    setIsLoading(true);
-    setAuthError(false);
-
-    let fcmToken = "";
+  // 2. 토큰 발급 로직
+  const requestPermission = async (isRetry = false) => {
     try {
+      // 권한 요청 시도
       const permission = await Notification.requestPermission();
       if (permission === "granted" && messaging) {
-        fcmToken = await getToken(messaging, {
+        const token = await getToken(messaging, {
           vapidKey:
             "BB_EG243UCmE4XHpd1LkM4RsVLeqN-KXRayAomJPklo0rwEgDEhqcyOqep4Gh_b3O1FhecdsPsfDbaOYolwmY-4",
         });
+        if (token) setFcmToken(token);
+      } else if (isRetry) {
+        // 전송 버튼 클릭 후의 재시도인 경우에만 경고
+        alert("Turn on notifications to get updates");
       }
     } catch (e) {
-      console.warn("FCM 토큰 실패", e);
+      console.error("FCM 토큰 발급 실패", e);
     }
+  };
+
+  // 페이지 진입 시 최초 1회 요청
+  useEffect(() => {
+    const initializeNotification = async () => {
+      await requestPermission();
+    };
+
+    initializeNotification();
+  }, []);
+
+  // 3. 로그인 함수 (로그인을 막지 않음)
+  const handleAuth = async (inputId: string, inputPw: string) => {
+    if (!inputId || !inputPw) return;
+
+    // 토큰이 없는 경우에만 로직 수행
+    if (!fcmToken) {
+      if (!hasRequested) {
+        // 전송 버튼 클릭 시 처음이라면 권한 요청 + 경고
+        await requestPermission(true);
+        setHasRequested(true);
+      } else {
+        // 이미 한번 시도했으면 경고 메시지만 출력
+        alert("Notifications are off");
+      }
+    }
+
+    // 알림 여부와 상관없이 로그인 프로세스 진행
+    setIsLoading(true);
+    setAuthError(false);
 
     try {
       const res = await fetch(`${WORKER}/api/qr/receive`, {
@@ -68,24 +93,20 @@ export default function Login() {
         body: JSON.stringify({
           id: inputId,
           password: inputPw,
-          token: fcmToken,
+          token: fcmToken || null, // 토큰이 없으면 null 전달
         }),
       });
 
       if (res.ok) {
         localStorage.setItem("uniqueId", inputId);
         localStorage.setItem("password", inputPw);
-        if (autoSave) {
-          localStorage.setItem("autoSave", "true");
-        } else {
-          localStorage.setItem("autoSave", "false");
-        }
+        localStorage.setItem("autoSave", autoSave ? "true" : "false");
         navigate("/receive");
       } else {
         setAuthError(true);
       }
     } catch (error) {
-      console.error("error:", error);
+      console.error("로그인 실패:", error);
       setAuthError(true);
     } finally {
       setIsLoading(false);

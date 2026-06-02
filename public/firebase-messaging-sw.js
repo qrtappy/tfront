@@ -1,10 +1,10 @@
-importScripts(
-  "https://www.gstatic.com/firebasejs/12.14.0/firebase-app-compat.js",
-);
-importScripts(
-  "https://www.gstatic.com/firebasejs/12.14.0/firebase-messaging-compat.js",
-);
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  onBackgroundMessage,
+  getMessaging,
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging.js";
 
+// 파이어베이스 초기화
 const firebaseConfig = {
   apiKey: "AIzaSyD5WkdKbsGc1SEuWjxPAyYq7Pu1RANxjsk",
   authDomain: "cocod-8c97a.firebaseapp.com",
@@ -15,14 +15,16 @@ const firebaseConfig = {
   measurementId: "G-MV19YEZ3HE",
 };
 
-firebase.initializeApp(firebaseConfig);
-const messaging = firebase.messaging();
+const app = initializeApp(firebaseConfig);
+const messaging = getMessaging(app);
 
-// 백그라운드 메시지 처리
-messaging.onBackgroundMessage((payload) => {
-  self.registration.showNotification(payload.notification.title, {
-    body: payload.notification.body,
+// 백그라운드 푸시 알림 수신 대기
+onBackgroundMessage(messaging, (payload) => {
+  const notificationTitle = payload.notification?.title || "TAPTAPQR";
+  const notificationOptions = {
+    body: payload.notification?.body || "PHOTO",
     icon: "/icon-192x192.png",
-    image: payload.notification.image,
-  });
+  };
+
+  self.registration.showNotification(notificationTitle, notificationOptions);
 });
