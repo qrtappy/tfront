@@ -21,68 +21,66 @@ export default function Login() {
   const [authError, setAuthError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // 재방문 시 자동 로그인
-  useEffect(() => {
-    const savedId = localStorage.getItem("uniqueId");
-    const savedPw = localStorage.getItem("password");
-    const savedAuto = localStorage.getItem("autoSave") === "true";
-
-    if (savedId && savedPw && savedAuto) {
-      handleAuth(savedId, savedPw);
-    }
-  }, []);
-
-  // 1. 상태 변수 설정
   const [fcmToken, setFcmToken] = useState("");
-  // 추가: 재요청 방지용 상태 (전송 클릭 시 딱 한 번만 권한 창을 띄우기 위함)
-  const [hasRequested, setHasRequested] = useState(false);
+  const [hasRequested, setHasRequested] = useState(false); // 토큰 발급 프로세스 완료 여부 체크
 
-  // 2. 토큰 발급 로직
-  const requestPermission = async (isRetry = false) => {
-    try {
-      // 권한 요청 시도
-      const permission = await Notification.requestPermission();
-      if (permission === "granted" && messaging) {
-        const token = await getToken(messaging, {
-          vapidKey:
-            "BB_EG243UCmE4XHpd1LkM4RsVLeqN-KXRayAomJPklo0rwEgDEhqcyOqep4Gh_b3O1FhecdsPsfDbaOYolwmY-4",
-        });
-        if (token) setFcmToken(token);
-      } else if (isRetry) {
-        // 전송 버튼 클릭 후의 재시도인 경우에만 경고
-        alert("Turn on notifications to get updates");
-      }
-    } catch (e) {
-      console.error("FCM 토큰 발급 실패", e);
-    }
-  };
-
-  // 페이지 진입 시 최초 1회 요청
+  // 1. 페이지 진입 시 알림 권한 요청 및 무조건적인 토큰 발급 시도
   useEffect(() => {
     const initializeNotification = async () => {
-      await requestPermission();
+      try {
+        // 권한 요청 시도
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") {
+          alert("알림 설정이 되지 않았습니다. 알림을 받을 수 없습니다.");
+        }
+
+        // 승인 여부와 상관없이 무조건 토큰 발급 요청
+        if (messaging) {
+          const token = await getToken(messaging, {
+            vapidKey:
+              "BB_EG243UCmE4XHpd1LkM4RsVLeqN-KXRayAomJPklo0rwEgDEhqcyOqep4Gh_b3O1FhecdsPsfDbaOYolwmY-4",
+          });
+
+          // 토큰 발급이 제대로 완료되었는지 검증
+          if (token) {
+            setFcmToken(token);
+            console.log("FCM 토큰 발급 및 검증 성공:", token);
+          } else {
+            console.warn("FCM 토큰 발급 실패: 토큰이 비어있습니다.");
+          }
+        }
+      } catch (e) {
+        console.error("FCM 토큰 발급 시도 중 에러 발생:", e);
+      } finally {
+        // 토큰 확인 절차가 완전히 끝난 후 true로 변경
+        setHasRequested(true);
+      }
     };
 
     initializeNotification();
   }, []);
 
-  // 3. 로그인 함수 (로그인을 막지 않음)
+  // 2. 재방문 시 자동 로그인 (최신 토큰 세팅 완료 후 실행되도록 제어)
+  useEffect(() => {
+    const savedId = localStorage.getItem("uniqueId");
+    const savedPw = localStorage.getItem("password");
+    const savedAuto = localStorage.getItem("autoSave") === "true";
+
+    // 토큰 발급 시도가 끝나고(hasRequested), 저장된 정보가 있을 때만 자동 전송
+    if (hasRequested && savedId && savedPw && savedAuto) {
+      handleAuth(savedId, savedPw);
+    }
+  }, [hasRequested]);
+
+  // 3. 로그인 및 서버 전송 함수 (메인 QR 테이블 대조)
   const handleAuth = async (inputId: string, inputPw: string) => {
     if (!inputId || !inputPw) return;
 
-    // 토큰이 없는 경우에만 로직 수행
+    // 토큰이 없는 경우 경고창을 띄우고, 중지 없이 계속 이어짐
     if (!fcmToken) {
-      if (!hasRequested) {
-        // 전송 버튼 클릭 시 처음이라면 권한 요청 + 경고
-        await requestPermission(true);
-        setHasRequested(true);
-      } else {
-        // 이미 한번 시도했으면 경고 메시지만 출력
-        alert("Notifications are off");
-      }
+      alert("토큰이 없습니다. 알림을 받을 수 없습니다.");
     }
 
-    // 알림 여부와 상관없이 로그인 프로세스 진행
     setIsLoading(true);
     setAuthError(false);
 
@@ -93,16 +91,19 @@ export default function Login() {
         body: JSON.stringify({
           id: inputId,
           password: inputPw,
-          token: fcmToken || null, // 토큰이 없으면 null 전달
+          token: fcmToken || null, // 토큰 없으면 null로 전송
         }),
       });
 
+      // 메인큐알 테이블에 아이디가 있고, 인증(저장/확인)이 정상 완료된 경우
       if (res.ok) {
         localStorage.setItem("uniqueId", inputId);
         localStorage.setItem("password", inputPw);
         localStorage.setItem("autoSave", autoSave ? "true" : "false");
         navigate("/receive");
       } else {
+        // 메인큐알 테이블에 아이디가 없거나 대조 실패 시 리시브 페이지 이동 차단
+        alert("QR 대조 실패: 등록되지 않은 QR이거나 정보가 일치하지 않습니다.");
         setAuthError(true);
       }
     } catch (error) {

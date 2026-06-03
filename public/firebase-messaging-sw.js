@@ -1,10 +1,12 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import {
-  onBackgroundMessage,
-  getMessaging,
-} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging.js";
+// 1. 서비스 워커 전용 파이어베이스 v10 라이브러리 로드 (Compat 버전)
+importScripts(
+  "https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js",
+);
+importScripts(
+  "https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging-compat.js",
+);
 
-// 파이어베이스 초기화
+// 2. 파이어베이스 초기화
 const firebaseConfig = {
   apiKey: "AIzaSyD5WkdKbsGc1SEuWjxPAyYq7Pu1RANxjsk",
   authDomain: "cocod-8c97a.firebaseapp.com",
@@ -15,11 +17,15 @@ const firebaseConfig = {
   measurementId: "G-MV19YEZ3HE",
 };
 
-const app = initializeApp(firebaseConfig);
-const messaging = getMessaging(app);
+firebase.initializeApp(firebaseConfig);
 
-// 백그라운드 푸시 알림 수신 대기
-onBackgroundMessage(messaging, (payload) => {
+// 3. 메시징 객체 가져오기
+const messaging = firebase.messaging();
+
+// 4. 백그라운드 푸시 알림 수신 대기
+messaging.onBackgroundMessage((payload) => {
+  console.log("[firebase-messaging-sw.js] 백그라운드 알림 수신:", payload);
+
   const notificationTitle = payload.notification?.title || "TAPTAPQR";
   const notificationOptions = {
     body: payload.notification?.body || "PHOTO",
