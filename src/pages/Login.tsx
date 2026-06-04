@@ -1,5 +1,5 @@
 // src/pages/Login.tsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { messaging, getToken } from "../firebase";
 
@@ -22,7 +22,8 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
 
   const [fcmToken, setFcmToken] = useState("");
-  const [hasRequested, setHasRequested] = useState(false); // 토큰 발급 프로세스 완료 여부 체크
+  const tokenRef = useRef(""); // 추가
+  const [hasRequested, setHasRequested] = useState(false);
 
   // 1. 페이지 진입 시 알림 권한 요청 및 무조건적인 토큰 발급 시도
   useEffect(() => {
@@ -44,6 +45,7 @@ export default function Login() {
           // 토큰 발급이 제대로 완료되었는지 검증
           if (token) {
             setFcmToken(token);
+            tokenRef.current = token;
             console.log("FCM 토큰 발급 및 검증 성공:", token);
           } else {
             console.warn("FCM 토큰 발급 실패: 토큰이 비어있습니다.");
@@ -91,7 +93,7 @@ export default function Login() {
         body: JSON.stringify({
           id: inputId,
           password: inputPw,
-          token: fcmToken || null, // 토큰 없으면 null로 전송
+          token: tokenRef.current || null, // 토큰 없으면 null로 전송
         }),
       });
 
