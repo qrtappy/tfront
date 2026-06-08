@@ -23,7 +23,7 @@ export default function Login() {
 
   const [fcmToken, setFcmToken] = useState("");
   const tokenRef = useRef(""); // 추가
-  const [hasRequested, setHasRequested] = useState(false);
+  const [hasRequested, setHasRequested] = useState(false); // 토큰 발급 프로세스 완료 여부 체크
 
   // 1. 페이지 진입 시 알림 권한 요청 및 무조건적인 토큰 발급 시도
   useEffect(() => {
@@ -80,7 +80,7 @@ export default function Login() {
 
     // 토큰이 없는 경우 경고창을 띄우고, 중지 없이 계속 이어짐
     if (!fcmToken) {
-      alert("토큰이 없습니다. 알림을 받을 수 없습니다.");
+      alert("No token, no alarm");
     }
 
     setIsLoading(true);
@@ -105,7 +105,7 @@ export default function Login() {
         navigate("/receive");
       } else {
         // 메인큐알 테이블에 아이디가 없거나 대조 실패 시 리시브 페이지 이동 차단
-        alert("QR 대조 실패: 등록되지 않은 QR이거나 정보가 일치하지 않습니다.");
+        alert("Wrong qr or password");
         setAuthError(true);
       }
     } catch (error) {

@@ -38,9 +38,8 @@ export default function Receive() {
 
     // 다른 방 주소로 접근 시 자동 로그인을 보호하고 진입을 차단합니다.
     if (urlId && savedId && urlId !== savedId) {
-      alert(
-        "Another room is already auto-saved. Please log out first if you want to enter a new room.",
-      );
+      alert("Another room is saved. Please log out first");
+      return;
       // 로그인 페이지로 튕겨내는 코드와 return을 지워서 기존 방 데이터가 자연스럽게 연결되도록 둡니다.
     }
 
