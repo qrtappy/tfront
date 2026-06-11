@@ -1,4 +1,3 @@
-// src/pages/Login.tsx
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { messaging, getToken } from "../firebase";
@@ -22,27 +21,23 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
 
   const [fcmToken, setFcmToken] = useState("");
-  const tokenRef = useRef(""); // 추가
-  const [hasRequested, setHasRequested] = useState(false); // 토큰 발급 프로세스 완료 여부 체크
+  const tokenRef = useRef("");
+  const [hasRequested, setHasRequested] = useState(false);
 
-  // 1. 페이지 진입 시 알림 권한 요청 및 무조건적인 토큰 발급 시도
   useEffect(() => {
     const initializeNotification = async () => {
       try {
-        // 권한 요청 시도
         const permission = await Notification.requestPermission();
         if (permission !== "granted") {
           alert("알림 설정이 되지 않았습니다. 알림을 받을 수 없습니다.");
         }
 
-        // 승인 여부와 상관없이 무조건 토큰 발급 요청
         if (messaging) {
           const token = await getToken(messaging, {
             vapidKey:
               "BB_EG243UCmE4XHpd1LkM4RsVLeqN-KXRayAomJPklo0rwEgDEhqcyOqep4Gh_b3O1FhecdsPsfDbaOYolwmY-4",
           });
 
-          // 토큰 발급이 제대로 완료되었는지 검증
           if (token) {
             setFcmToken(token);
             tokenRef.current = token;
@@ -54,7 +49,6 @@ export default function Login() {
       } catch (e) {
         console.error("FCM 토큰 발급 시도 중 에러 발생:", e);
       } finally {
-        // 토큰 확인 절차가 완전히 끝난 후 true로 변경
         setHasRequested(true);
       }
     };
@@ -62,23 +56,19 @@ export default function Login() {
     initializeNotification();
   }, []);
 
-  // 2. 재방문 시 자동 로그인 (최신 토큰 세팅 완료 후 실행되도록 제어)
   useEffect(() => {
     const savedId = localStorage.getItem("uniqueId");
     const savedPw = localStorage.getItem("password");
     const savedAuto = localStorage.getItem("autoSave") === "true";
 
-    // 토큰 발급 시도가 끝나고(hasRequested), 저장된 정보가 있을 때만 자동 전송
     if (hasRequested && savedId && savedPw && savedAuto) {
       handleAuth(savedId, savedPw);
     }
   }, [hasRequested]);
 
-  // 3. 로그인 및 서버 전송 함수 (메인 QR 테이블 대조)
-  const handleAuth = async (inputId: string, inputPw: string) => {
+  async function handleAuth(inputId: string, inputPw: string) {
     if (!inputId || !inputPw) return;
 
-    // 토큰이 없는 경우 경고창을 띄우고, 중지 없이 계속 이어짐
     if (!fcmToken) {
       alert("No token, no alarm");
     }
@@ -93,18 +83,25 @@ export default function Login() {
         body: JSON.stringify({
           id: inputId,
           password: inputPw,
-          token: tokenRef.current || null, // 토큰 없으면 null로 전송
+          token: tokenRef.current || null,
         }),
       });
 
-      // 메인큐알 테이블에 아이디가 있고, 인증(저장/확인)이 정상 완료된 경우
       if (res.ok) {
+        // 짚어주신 대로 딱 이 부분만 fcmtoken에서 yeartoken으로 수정했습니다.
+        const data = (await res.json()) as { yeartoken: string };
+
         localStorage.setItem("uniqueId", inputId);
         localStorage.setItem("password", inputPw);
+
+        // 2. 서버가 준 yeartoken이 있으면 창고에 확실하게 업데이트하기
+        if (data.yeartoken) {
+          localStorage.setItem("yeartoken", data.yeartoken);
+        }
+
         localStorage.setItem("autoSave", autoSave ? "true" : "false");
         navigate("/receive");
       } else {
-        // 메인큐알 테이블에 아이디가 없거나 대조 실패 시 리시브 페이지 이동 차단
         alert("Wrong qr or password");
         setAuthError(true);
       }
@@ -114,7 +111,7 @@ export default function Login() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }
 
   return (
     <div className="flex justify-center min-h-screen bg-gray-50 select-none">

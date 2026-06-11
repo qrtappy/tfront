@@ -28,26 +28,23 @@ export default function Receive() {
     if (window.navigator.vibrate) window.navigator.vibrate(10);
   };
 
-  // 페이지 진입 시 로그인 정보를 판별하여 자동으로 데이터를 가져오는 훅 추가
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const urlId = urlParams.get("id");
 
     const savedId = localStorage.getItem("uniqueId");
-    const savedPassword = localStorage.getItem("password");
+    const savedPw = localStorage.getItem("password"); // 실제 패스워드 대신 발행받은 입장권 사용
 
-    // 다른 방 주소로 접근 시 자동 로그인을 보호하고 진입을 차단합니다.
     if (urlId && savedId && urlId !== savedId) {
       alert("Another room is saved. Please log out first");
       return;
-      // 로그인 페이지로 튕겨내는 코드와 return을 지워서 기존 방 데이터가 자연스럽게 연결되도록 둡니다.
     }
 
-    if (savedId && savedPassword) {
+    if (savedId && savedPw) {
       fetch(`${WORKER}/api/qr/receive`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: savedId, password: savedPassword }),
+        body: JSON.stringify({ id: savedId, password: savedPw }), // 패스워드 입력칸에 안전하게 입장권 전달
       })
         .then((res) => {
           if (res.ok) return res.json();
