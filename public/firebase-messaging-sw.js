@@ -23,6 +23,7 @@ firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
 // 4. 백그라운드 푸시 알림 수신 대기
+// 4. 백그라운드 푸시 알림 수신 대기 (소리 및 진동 옵션 탑재 구문)
 messaging.onBackgroundMessage((payload) => {
   console.log("[firebase-messaging-sw.js] 백그라운드 알림 수신:", payload);
 
@@ -30,7 +31,21 @@ messaging.onBackgroundMessage((payload) => {
   const notificationOptions = {
     body: payload.notification?.body || "PHOTO",
     icon: "/icon-192x192.png",
+
+    // 알림 수신 시 소리 발생 설정
+    sound: "default",
+
+    // 알림 수신 시 진동 패턴 설정 (진동 200ms -> 대기 100ms -> 진동 200ms)
+    vibrate: [200, 100, 200],
+
+    // 연속 알림 발생 시 덮어쓰기 위한 식별 태그
+    tag: "taptapqr-photo-alert",
+    renotify: true,
   };
 
-  self.registration.showNotification(notificationTitle, notificationOptions);
+  // 서비스 워커 시스템에 상단 바 알림 노출 강제 명령
+  return self.registration.showNotification(
+    notificationTitle,
+    notificationOptions,
+  );
 });
