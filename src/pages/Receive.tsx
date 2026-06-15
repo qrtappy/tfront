@@ -214,18 +214,25 @@ export default function Receive() {
               className="object-contain"
             />
           </button>
-          {/* 💡 배경을 흰색(bg-white)으로 바꾸고, 하단 탭바(z-40)보다 뒤에 깔리도록 z-30으로 조절 */}
+
           {zoomedLog && (
-            /* 💡 사진을 누르면 즉시 닫히도록 onClick을 이미지 영역 전체에 적용 */
-            <div
-              onClick={() => setZoomedLog(null)}
-              className="fixed top-[73px] left-0 right-0 bottom-[73px] bg-white z-30 flex items-center justify-center animate-fade-in cursor-pointer"
-            >
-              <div className="relative w-full max-w-[430px] px-4">
+            <div className="fixed top-[73px] left-0 right-0 bottom-[73px] bg-white z-30 flex items-center justify-center animate-fade-in">
+              <div className="relative w-full max-w-[430px] p-4 h-full flex items-center justify-center">
+                {/* 우측 상단 엑스 동그라미 닫기 버튼 */}
+                <button
+                  onClick={() => setZoomedLog(null)}
+                  className="absolute top-6 right-6 z-40 w-10 h-10 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full flex items-center justify-center shadow-md transition-colors"
+                  aria-label="닫기"
+                >
+                  <span className="text-xl font-bold">✕</span>
+                </button>
+
+                {/* 화면에 맞춰 온전히 확대되고 멈추는 사진 (클릭 전파 차단) */}
                 <img
                   src={zoomedLog.src}
                   alt=""
-                  className="w-full aspect-[2/3] object-cover rounded-lg shadow-xl"
+                  className="w-full h-full object-contain rounded-lg shadow-xl"
+                  onClick={(e) => e.stopPropagation()}
                 />
               </div>
             </div>
