@@ -13,6 +13,7 @@ export default function Receive() {
   const [logs, setLogs] = useState<LogItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isDeleteMode, setIsDeleteMode] = useState(false);
+  const [zoomedLog, setZoomedLog] = useState<LogItem | null>(null);
 
   const isLongPress = useRef(false);
   const timerRef = useRef<number | null>(null);
@@ -29,6 +30,12 @@ export default function Receive() {
   };
 
   useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .register("/firebase-messaging-sw.js")
+        .then(() => console.log("서비스 워커 등록 완료!"))
+        .catch((err) => console.error("등록 실패:", err));
+    }
     const urlParams = new URLSearchParams(window.location.search);
     const urlId = urlParams.get("id");
 
@@ -98,6 +105,8 @@ export default function Receive() {
     }
     if (isDeleteMode) {
       toggleSelect(log.id);
+    } else {
+      setZoomedLog(log);
     }
   };
 
@@ -205,6 +214,22 @@ export default function Receive() {
               className="object-contain"
             />
           </button>
+          {/* 💡 배경을 흰색(bg-white)으로 바꾸고, 하단 탭바(z-40)보다 뒤에 깔리도록 z-30으로 조절 */}
+          {zoomedLog && (
+            /* 💡 사진을 누르면 즉시 닫히도록 onClick을 이미지 영역 전체에 적용 */
+            <div
+              onClick={() => setZoomedLog(null)}
+              className="fixed top-[73px] left-0 right-0 bottom-[73px] bg-white z-30 flex items-center justify-center animate-fade-in cursor-pointer"
+            >
+              <div className="relative w-full max-w-[430px] px-4">
+                <img
+                  src={zoomedLog.src}
+                  alt=""
+                  className="w-full aspect-[2/3] object-cover rounded-lg shadow-xl"
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

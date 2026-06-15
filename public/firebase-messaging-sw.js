@@ -16,7 +16,7 @@ const firebaseConfig = {
   appId: "1:1024531429157:web:d9b37f72a3aba2f71e8ccc",
 };
 
-// 3. 최신 FCM v1 규격과 호환되는 메시징 객체 생성
+firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
 // 4. 백그라운드 푸시 알림 수신 및 사운드/진동 처리
