@@ -86,19 +86,9 @@ export default function Login() {
           token: tokenRef.current || null,
         }),
       });
-
       if (res.ok) {
-        // 짚어주신 대로 딱 이 부분만 fcmtoken에서 yeartoken으로 수정했습니다.
-        const data = (await res.json()) as { yeartoken: string };
-
         localStorage.setItem("uniqueId", inputId);
         localStorage.setItem("password", inputPw);
-
-        // 2. 서버가 준 yeartoken이 있으면 창고에 확실하게 업데이트하기
-        if (data.yeartoken) {
-          localStorage.setItem("yeartoken", data.yeartoken);
-        }
-
         localStorage.setItem("autoSave", autoSave ? "true" : "false");
         navigate("/receive");
       } else {
