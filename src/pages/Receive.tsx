@@ -12,6 +12,10 @@ interface LogItem {
 export default function Receive() {
   const [logs, setLogs] = useState<LogItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  // 다음 페이지 위치를 기억할 상자 (처음에는 빈 값)
+  const [cursor, setCursor] = useState<string | null>(null);
+  // 더보기 버튼을 보여줄지 말지 결정할 상자
+  const [hasMore, setHasMore] = useState(false);
   const [isDeleteMode, setIsDeleteMode] = useState(false);
   const [zoomedLog, setZoomedLog] = useState<LogItem | null>(null);
 
@@ -29,6 +33,66 @@ export default function Receive() {
     if (window.navigator.vibrate) window.navigator.vibrate(10);
   };
 
+  // 사진 데이터를 불러오는 함수 (첫 로드와 더보기 클릭 시 공통 사용)
+  const loadPhotos = (currentCursor: string | null = null) => {
+    const savedId = localStorage.getItem("uniqueId");
+    const savedPw = localStorage.getItem("password");
+
+    if (savedId && savedPw) {
+      fetch(`${WORKER}/api/qr/receive`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // 서버 요청 봉투에 현재 커서 위치 정보를 주입
+        body: JSON.stringify({
+          id: savedId,
+          password: savedPw,
+          cursor: currentCursor,
+        }),
+      })
+        .then((res) => {
+          if (res.ok) return res.json();
+          throw new Error("인증 실패");
+        })
+        .then(
+          (data: {
+            photos?: { key: string; uploaded: string }[];
+            nextCursor?: string | null;
+          }) => {
+            const photos = data.photos || [];
+            const newLogs: LogItem[] = photos
+              .map((p: { key: string; uploaded: string }) => ({
+                id: p.key,
+                src: `${WORKER}/api/photo/view/${encodeURIComponent(p.key)}`,
+                displayTime: new Date(p.uploaded).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }),
+                timestamp: new Date(p.uploaded).getTime(),
+              }))
+              .filter((log: LogItem) => !hiddenLogs.includes(log.id));
+
+            // 기존 사진 리스트 뒤에 새 사진들을 누적하여 병합
+            setLogs((prev) => [...prev, ...newLogs]);
+
+            // 다음 페이지 커서 정보가 존재하면 상태를 갱신하고 버튼 활성화
+            if (data.nextCursor) {
+              setCursor(data.nextCursor);
+              setHasMore(true);
+            } else {
+              setCursor(null);
+              setHasMore(false);
+            }
+          },
+        )
+        .catch((error) => {
+          console.error("데이터 로드 실패:", error);
+          window.location.href = "/login";
+        });
+    } else {
+      window.location.href = "/login";
+    }
+  };
+
   useEffect(() => {
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker
@@ -40,45 +104,14 @@ export default function Receive() {
     const urlId = urlParams.get("id");
 
     const savedId = localStorage.getItem("uniqueId");
-    const savedPw = localStorage.getItem("password"); // 실제 패스워드 대신 발행받은 입장권 사용
 
     if (urlId && savedId && urlId !== savedId) {
       alert("Another room is saved. Please log out first");
       return;
     }
 
-    if (savedId && savedPw) {
-      fetch(`${WORKER}/api/qr/receive`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: savedId, password: savedPw }), // 패스워드 입력칸에 안전하게 입장권 전달
-      })
-        .then((res) => {
-          if (res.ok) return res.json();
-          throw new Error("인증 실패");
-        })
-        .then((data: { photos?: { key: string; uploaded: string }[] }) => {
-          const photos = data.photos || [];
-          const newLogs: LogItem[] = photos
-            .map((p: { key: string; uploaded: string }) => ({
-              id: p.key,
-              src: `${WORKER}/api/photo/view/${encodeURIComponent(p.key)}`,
-              displayTime: new Date(p.uploaded).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              }),
-              timestamp: new Date(p.uploaded).getTime(),
-            }))
-            .filter((log: LogItem) => !hiddenLogs.includes(log.id));
-          setLogs(newLogs);
-        })
-        .catch((error) => {
-          console.error("데이터 로드 실패:", error);
-          window.location.href = "/login";
-        });
-    } else {
-      window.location.href = "/login";
-    }
+    // 화면 진입 시 최초 10장(첫 페이지) 조회 수행
+    loadPhotos(null);
   }, []);
 
   const toggleSelect = (logId: string) => {
@@ -169,6 +202,18 @@ export default function Receive() {
               )}
             </div>
           ))}
+
+          {/* 추가 조회 정보가 있을 때만 목록 맨 하단 그리드 내에 더보기 버튼 렌더링 */}
+          {hasMore && (
+            <div className="col-span-2 pt-4 pb-8 flex justify-center">
+              <button
+                onClick={() => loadPhotos(cursor)}
+                className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-full transition-colors shadow-sm"
+              >
+                사진 더보기
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="fixed bottom-0 w-full max-w-[430px] bg-white border-t border-gray-100 flex justify-between items-center px-10 py-6 z-50">
