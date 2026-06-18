@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getMessaging } from "firebase/messaging";
+import { getMessaging, onMessage } from "firebase/messaging";
 export { getToken } from "firebase/messaging";
 // 아까 메모장에 복사한 내용을 여기에 붙여넣으세요
 const firebaseConfig = {
@@ -26,3 +26,10 @@ export const requestPermission = async () => {
     await Notification.requestPermission();
   }
 };
+
+// 앱이 켜져있는 상태(포그라운드)에서 알림이 오면 자동으로 새로고침
+if (messaging) {
+  onMessage(messaging, () => {
+    window.location.reload();
+  });
+}
