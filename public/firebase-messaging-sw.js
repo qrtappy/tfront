@@ -22,25 +22,4 @@ const messaging = firebase.messaging();
 // 4. 백그라운드 푸시 알림 수신 및 사운드/진동 처리
 messaging.onBackgroundMessage((payload) => {
   console.log("[firebase-messaging-sw.js] 최신 FCM v1 알림 수신:", payload);
-
-  // 백엔드가 보낸 fcm v1 페이로드 구조에 맞춰 데이터 추출
-  const notificationTitle = payload.data?.title || "TAPTAPQR";
-  const notificationOptions = {
-    body: payload.notification?.body || "PHOTO",
-    icon: "/icon-192x192.png",
-
-    // 기기 사운드 및 진동 강제 작동 설정
-    sound: "default",
-    vibrate: [200, 100, 200],
-
-    // 알림 중복 및 덮어쓰기 설정
-    tag: "taptapqr-photo-alert",
-    renotify: true,
-  };
-
-  // 브라우저 시스템 상단 바에 알림 노출
-  return self.registration.showNotification(
-    notificationTitle,
-    notificationOptions,
-  );
 });
