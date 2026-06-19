@@ -24,7 +24,7 @@ messaging.onBackgroundMessage((payload) => {
   console.log("[firebase-messaging-sw.js] 최신 FCM v1 알림 수신:", payload);
 
   // 백엔드가 보낸 fcm v1 페이로드 구조에 맞춰 데이터 추출
-  const notificationTitle = payload.notification?.title || "TAPTAPQR";
+  const notificationTitle = payload.data?.title || "TAPTAPQR";
   const notificationOptions = {
     body: payload.notification?.body || "PHOTO",
     icon: "/icon-192x192.png",
