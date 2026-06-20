@@ -94,7 +94,7 @@ export default function Receive() {
       isLongPress.current = true;
       setIsDeleteMode(true);
       toggleSelect(logId);
-    }, 500);
+    }, 1500);
   };
 
   const handlePointerUp = (e: React.PointerEvent, log: LogItem) => {
@@ -216,7 +216,8 @@ export default function Receive() {
           </button>
 
           {zoomedLog && (
-            <div className="fixed top-[73px] left-0 right-0 bottom-[73px] bg-white z-30 flex items-center justify-center animate-fade-in">
+            // 수정 후: top-0으로 변경하여 상단을 꽉 채움
+            <div className="fixed top-0 left-0 right-0 bottom-[73px] bg-white z-30 flex items-center justify-center animate-fade-in">
               <div className="relative w-full max-w-[430px] p-4 h-full flex items-center justify-center">
                 {/* 우측 상단 엑스 동그라미 닫기 버튼 */}
                 <button
