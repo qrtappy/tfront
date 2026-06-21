@@ -94,7 +94,7 @@ export default function Receive() {
       isLongPress.current = true;
       setIsDeleteMode(true);
       toggleSelect(logId);
-    }, 1500);
+    }, 1000);
   };
 
   const handlePointerUp = (e: React.PointerEvent, log: LogItem) => {
