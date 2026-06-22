@@ -74,6 +74,74 @@ export default function AdminQR() {
   const pngMapRef = useRef<Record<string, string>>({});
   const totalRef = useRef(0);
 
+  // ── [신규 추가] 찾기 바 및 DB 실시간 숫자 통계 상태 ──
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResult, setSearchResult] = useState<
+    | {
+        uniqueId: string;
+        status: string;
+        createdAt: string;
+      }
+    | string
+    | null
+  >(null);
+  const [dbStats, setDbStats] = useState<{
+    total: number;
+    monthly: Array<{ month: string; count: number }>;
+  }>({ total: 0, monthly: [] });
+
+  // ── [신규 추가] 페이지 로드 시 DB에서 숫자 통계만 딱 1줄 가져옴 (요금 완벽 차단) ──
+  const fetchStats = async () => {
+    try {
+      const res = await fetch(`${WORKER}/api/admin/stats`);
+      const data = await res.json();
+      setDbStats(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    const initStats = async () => {
+      try {
+        await fetchStats();
+      } catch (err) {
+        console.error("통계 로드 실패:", err);
+      }
+    };
+    initStats();
+  }, []);
+
+  // ── [신규 추가] 단건 조준 검색 기능 ──
+  const handleSearch = async () => {
+    if (!searchQuery) return;
+    try {
+      const res = await fetch(
+        `${WORKER}/api/admin/search?q=${encodeURIComponent(searchQuery)}`,
+      );
+      const data = await res.json();
+      setSearchResult(data.data);
+    } catch {
+      alert("검색 중 오류가 발생했습니다.");
+    }
+  };
+
+  // ── [신규 추가] 상세 ID 없이 '월별 생성 개수'만 담은 엑셀(CSV) 다운로드 ──
+  const downloadExcel = () => {
+    let csvContent = "\uFEFF월별,생성된 큐알 숫자\n";
+    dbStats.monthly.forEach((item) => {
+      csvContent += `${item.month},${item.count}개\n`;
+    });
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `월별_QR_생성_통계.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   // ── QR 생성 ───────────────────────────────────────────
   const handleGenerate = async () => {
     if (!adminKey) return alert("x-admin-secret 키를 입력해주세요.");
@@ -127,6 +195,9 @@ export default function AdminQR() {
         return;
       }
 
+      // QR 새로 생성 성공 시 DB 통계 숫자도 실시간 갱신
+      fetchStats();
+
       // Canvas QR 렌더링 시작
       setCurrentIds(ids);
     } catch {
@@ -170,9 +241,6 @@ export default function AdminQR() {
     setZipping(false);
   };
 
-  // ── 총 생성 개수 ──────────────────────────────────────
-  const totalGenerated = sessions.reduce((sum, s) => sum + s.success, 0);
-
   return (
     <div className="min-h-screen bg-gray-100">
       {/* 숨겨진 QR Canvas */}
@@ -208,15 +276,68 @@ export default function AdminQR() {
       </div>
 
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        {/* 총 생성 개수 */}
+        {/* 총 생성 개수 (DB 누적 통계 연동) */}
         <div className="bg-blue-600 text-white rounded-2xl p-6 flex justify-between items-center">
           <div>
             <div className="text-sm opacity-80">총 생성된 QR 개수</div>
             <div className="text-4xl font-black">
-              {totalGenerated.toLocaleString()}
+              {dbStats.total.toLocaleString()}
             </div>
           </div>
           <div className="text-6xl opacity-20">📱</div>
+        </div>
+
+        {/* 🔍 [신규] 상단 찾기 바 UI */}
+        <div className="bg-white rounded-2xl p-6 shadow space-y-3">
+          <h3 className="text-sm font-bold text-gray-700">
+            🔍 항목 찾기 (ID / 비밀번호 조회)
+          </h3>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="검색할 ID 등을 입력하세요"
+              className="flex-1 p-3 border rounded-xl text-sm outline-none focus:border-blue-400"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <button
+              onClick={handleSearch}
+              className="px-6 py-3 bg-gray-800 hover:bg-gray-900 text-white rounded-xl font-bold text-sm"
+            >
+              찾기
+            </button>
+          </div>
+          {searchResult && (
+            <div className="bg-gray-50 p-4 rounded-xl text-xs font-mono text-gray-600 break-all">
+              🎯 검색 결과:{" "}
+              {typeof searchResult === "object"
+                ? JSON.stringify(searchResult)
+                : searchResult}
+            </div>
+          )}
+        </div>
+
+        {/* 📅 [신규] 월별 통계 리스트 및 엑셀 다운로드 */}
+        <div className="bg-white rounded-2xl p-6 shadow space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-bold">📅 월별 생성 통계</h3>
+            <button
+              onClick={downloadExcel}
+              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs font-bold transition-all shadow"
+            >
+              📊 월별 통계 엑셀 다운로드
+            </button>
+          </div>
+          <div className="divide-y divide-gray-100">
+            {dbStats.monthly.map((item, i) => (
+              <div key={i} className="py-3 flex justify-between text-sm">
+                <span className="text-gray-600 font-medium">{item.month}</span>
+                <span className="font-mono font-bold text-blue-600">
+                  {item.count.toLocaleString()} 개
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* QR 생성 입력 */}
