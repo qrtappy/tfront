@@ -85,10 +85,9 @@ export default function AdminQR() {
     | string
     | null
   >(null);
-  const [dbStats, setDbStats] = useState<{
-    total: number;
-    monthly: Array<{ month: string; count: number }>;
-  }>({ total: 0, monthly: [] });
+
+  // 월별 변수를 빼고 total 개수만 저장하도록 수정
+  const [dbStats, setDbStats] = useState<{ total: number }>({ total: 0 });
 
   // ── [신규 추가] 페이지 로드 시 DB에서 숫자 통계만 딱 1줄 가져옴 (요금 완벽 차단) ──
   const fetchStats = async () => {
@@ -124,22 +123,6 @@ export default function AdminQR() {
     } catch {
       alert("검색 중 오류가 발생했습니다.");
     }
-  };
-
-  // ── [신규 추가] 상세 ID 없이 '월별 생성 개수'만 담은 엑셀(CSV) 다운로드 ──
-  const downloadExcel = () => {
-    let csvContent = "\uFEFF월별,생성된 큐알 숫자\n";
-    dbStats.monthly.forEach((item) => {
-      csvContent += `${item.month},${item.count}개\n`;
-    });
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `월별_QR_생성_통계.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
   };
 
   // ── QR 생성 ───────────────────────────────────────────
@@ -317,28 +300,7 @@ export default function AdminQR() {
           )}
         </div>
 
-        {/* 📅 [신규] 월별 통계 리스트 및 엑셀 다운로드 */}
-        <div className="bg-white rounded-2xl p-6 shadow space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-bold">📅 월별 생성 통계</h3>
-            <button
-              onClick={downloadExcel}
-              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs font-bold transition-all shadow"
-            >
-              📊 월별 통계 엑셀 다운로드
-            </button>
-          </div>
-          <div className="divide-y divide-gray-100">
-            {dbStats.monthly.map((item, i) => (
-              <div key={i} className="py-3 flex justify-between text-sm">
-                <span className="text-gray-600 font-medium">{item.month}</span>
-                <span className="font-mono font-bold text-blue-600">
-                  {item.count.toLocaleString()} 개
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
+        {/* 📅 월별 생성 통계 디자인 영역 완벽 삭제 완료 */}
 
         {/* QR 생성 입력 */}
         <div className="bg-white rounded-2xl p-6 shadow">
