@@ -20,8 +20,15 @@ firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
 // 4. 백그라운드 푸시 알림 수신 및 사운드/진동 처리
+// 4. 백그라운드 푸시 알림 수신 시 브라우저가 직접 알림창 생성
 messaging.onBackgroundMessage((payload) => {
-  console.log("[firebase-messaging-sw.js] 최신 FCM v1 알림 수신:", payload);
+  const { title, body, image, url } = payload.data;
+
+  self.registration.showNotification(title, {
+    body: body,
+    icon: image,
+    data: { url: url }, // 클릭 시 사용할 주소를 이곳에 저장
+  });
 });
 
 // ⭐️ [수정 핵심] 5. 푸시 알림을 사용자가 클릭했을 때의 동작 정의
