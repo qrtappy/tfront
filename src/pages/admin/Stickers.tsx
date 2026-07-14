@@ -15,8 +15,8 @@ export default function AdminStickers() {
   }, [navigate]);
 
   const [stickers, setStickers] = useState({
-    urls: Array(12).fill(""),
-    links: Array(12).fill(""),
+    urls: Array(6).fill(""),
+    links: Array(6).fill(""),
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -43,7 +43,13 @@ export default function AdminStickers() {
       await fetch(`${WORKER}/api/admin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "stickers", data: stickers }),
+        body: JSON.stringify({
+          type: "stickers",
+          data: {
+            urls: stickers.urls.slice(0, 6),
+            links: stickers.links.slice(0, 6),
+          },
+        }),
       });
       alert("저장 완료!");
     } catch {
@@ -99,7 +105,7 @@ export default function AdminStickers() {
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Array.from({ length: 12 }).map((_, i) => (
+          {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="bg-white rounded-2xl p-4 shadow space-y-3">
               {/* 스티커 번호 + 미리보기 */}
               <div className="flex justify-between items-center">
