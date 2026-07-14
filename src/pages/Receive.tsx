@@ -9,6 +9,53 @@ interface LogItem {
   timestamp?: number;
 }
 
+// === 여기서부터 추가 ===
+const DB_NAME = "PhotoCacheDB";
+const STORE_NAME = "photos";
+const EXPIRE_TIME_MS = 12 * 60 * 60 * 1000;
+
+const initDB = (): Promise<IDBDatabase> => {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, 1);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: "id" });
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+};
+
+const getCachedPhoto = (
+  db: IDBDatabase,
+  id: string,
+): Promise<{ id: string; blobUrl: string; timestamp: number } | null> => {
+  return new Promise((resolve) => {
+    const transaction = db.transaction(STORE_NAME, "readonly");
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.get(id);
+    request.onsuccess = () => resolve(request.result || null);
+    request.onerror = () => resolve(null);
+  });
+};
+
+const savePhotoToCache = (
+  db: IDBDatabase,
+  id: string,
+  blobUrl: string,
+  timestamp: number,
+): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, "readwrite");
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.put({ id, blobUrl, timestamp });
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+};
+
 export default function Receive() {
   const [logs, setLogs] = useState<LogItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -48,33 +95,105 @@ export default function Receive() {
     }
 
     if (savedId && savedPw) {
-      fetch(`${WORKER}/api/qr/receive`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: savedId, password: savedPw }), // 패스워드 입력칸에 안전하게 입장권 전달
-      })
-        .then((res) => {
-          if (res.ok) return res.json();
-          throw new Error("인증 실패");
+      initDB()
+        .then((db) => {
+          fetch(`${WORKER}/api/qr/receive`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: savedId, password: savedPw }),
+          })
+            .then((res) => {
+              if (res.ok) return res.json();
+              throw new Error("인증 실패");
+            })
+            .then(
+              async (data: {
+                photos?: { key: string; uploaded: string }[];
+              }) => {
+                const photos = data.photos || [];
+                const now = Date.now();
+
+                const newLogsPromises = photos.map(
+                  async (p: { key: string; uploaded: string }) => {
+                    const id = p.key;
+                    const uploadedTime = new Date(p.uploaded).getTime();
+
+                    const cached = await getCachedPhoto(db, id);
+
+                    if (cached && now - cached.timestamp < EXPIRE_TIME_MS) {
+                      return {
+                        id: id,
+                        src: cached.blobUrl,
+                        displayTime: new Date(p.uploaded).toLocaleTimeString(
+                          [],
+                          {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          },
+                        ),
+                        timestamp: uploadedTime,
+                      };
+                    }
+
+                    try {
+                      const imageResponse = await fetch(
+                        `${WORKER}/api/photo/view/${encodeURIComponent(id)}`,
+                      );
+                      if (!imageResponse.ok)
+                        throw new Error("이미지 다운로드 실패");
+
+                      const blob = await imageResponse.blob();
+                      const localBlobUrl = URL.createObjectURL(blob);
+
+                      await savePhotoToCache(db, id, localBlobUrl, now);
+
+                      return {
+                        id: id,
+                        src: localBlobUrl,
+                        displayTime: new Date(p.uploaded).toLocaleTimeString(
+                          [],
+                          {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          },
+                        ),
+                        timestamp: uploadedTime,
+                      };
+                    } catch (err) {
+                      console.error(
+                        "다운로드 에러 발생 시 원본 주소 대체:",
+                        err,
+                      );
+                      return {
+                        id: id,
+                        src: `${WORKER}/api/photo/view/${encodeURIComponent(id)}`,
+                        displayTime: new Date(p.uploaded).toLocaleTimeString(
+                          [],
+                          {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          },
+                        ),
+                        timestamp: uploadedTime,
+                      };
+                    }
+                  },
+                );
+
+                const resolvedLogs = await Promise.all(newLogsPromises);
+                const filteredLogs = resolvedLogs.filter(
+                  (log: LogItem) => !hiddenLogs.includes(log.id),
+                );
+                setLogs(filteredLogs);
+              },
+            )
+            .catch((error) => {
+              console.error("데이터 로드 실패:", error);
+              window.location.href = "/login";
+            });
         })
-        .then((data: { photos?: { key: string; uploaded: string }[] }) => {
-          const photos = data.photos || [];
-          const newLogs: LogItem[] = photos
-            .map((p: { key: string; uploaded: string }) => ({
-              id: p.key,
-              src: `${WORKER}/api/photo/view/${encodeURIComponent(p.key)}`,
-              displayTime: new Date(p.uploaded).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              }),
-              timestamp: new Date(p.uploaded).getTime(),
-            }))
-            .filter((log: LogItem) => !hiddenLogs.includes(log.id));
-          setLogs(newLogs);
-        })
-        .catch((error) => {
-          console.error("데이터 로드 실패:", error);
-          window.location.href = "/login";
+        .catch((dbError) => {
+          console.error("IndexedDB 연결 실패:", dbError);
         });
     } else {
       window.location.href = "/login";
